@@ -2,38 +2,42 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A comprehensive Discord bot designed to handle support tickets with ease. Features automated ticket creation, transcript saving, and a clean, user-friendly interface. Perfect for Discord servers that need organized customer support or help desk functionality.
+A comprehensive Discord bot designed to handle support tickets with ease. Features automated ticket creation, blacklist system, transcript saving, and a clean, user-friendly interface. Perfect for Discord servers that need organized customer support or help desk functionality.
 
 ## ✨ Features
 
 - **Automated Ticket System** with sequential numbering
-- **Permission-based Access Control** for ticket management  
+- **Slash Commands** for setup and management
+- **Blacklist System** to block abusive users from opening tickets
+- **Permission-based Access Control** with custom admin role
 - **Transcript Generation** - automatically saves conversation history
 - **Database Integration** with SQLite for persistent storage
 - Details include:
   - 🎟️ Unique ticket numbering system
   - 🔒 Secure channel permissions (only ticket creator + staff can view)
   - 📋 Automatic transcript saving to designated channel
-  - 🗃️ SQLite database for ticket tracking
-  - 🛡️ Permission checks for closing tickets
-  - ⚡ Easy setup with single command
+  - 🚫 Blacklist management (`/blacklist`, `/unblacklist`, `/blacklistcheck`, `/blacklistlist`)
+  - 🛡️ Admin role assignment (`/setadminrole`)
+  - ⚡ Easy setup with `/setuptickets`
 
 ## 🎯 How It Works
 
-1. **Setup**: Admin runs `!setuptickets` to create the ticket panel
+1. **Setup**: Admin runs `/setuptickets` to create the ticket panel
 2. **Create Ticket**: Users click "Create Ticket" button
 3. **Support**: Staff members can view and respond in private ticket channels
-4. **Close Ticket**: Either ticket creator or staff with "Manage Channels" can close
+4. **Close Ticket**: Staff with `Manage Channels` permission or the **Admin Role** can close
 5. **Archive**: Transcript is automatically saved and channel is deleted
+6. **Blacklist**: Admins can restrict specific users from creating tickets
 
 ## 🛡️ Permission System
 
 The bot uses a secure permission system:
 
-- **Ticket Creation**: Any server member can create tickets
-- **Ticket Access**: Only the ticket creator and staff can view ticket channels
-- **Ticket Closing**: Ticket creator OR users with "Manage Channels" permission
-- **Setup Command**: Requires Administrator permission + optional bot owner restriction
+- **Ticket Creation**: Any non-blacklisted member can create tickets
+- **Ticket Access**: Only the ticket creator, staff, and admins can view ticket channels
+- **Ticket Closing**: Only staff with `Manage Channels` permission or the assigned **Admin Role**
+- **Setup Command**: Requires Administrator permission (optionally restricted to Bot Owner)
+- **Blacklist Commands**: Require `Manage Channels` / `Administrator` or the Admin Role
 
 ## 📦 Requirements
 
@@ -41,7 +45,7 @@ The bot uses a secure permission system:
 - A Discord bot token
 - Discord.js v14
 - better-sqlite3 for database
-- Message Content Intent
+- Message Content Intent (for full functionality)
 
 ## 🔧 Setup
 
@@ -49,7 +53,7 @@ The bot uses a secure permission system:
 
 ```bash
 git clone https://github.com/ItsAlexIK/MiauDex-Tickets.git
-cd cd MiauDex-Tickets
+cd MiauDex-Tickets
 npm install
 ```
 
@@ -68,8 +72,8 @@ BOT_OWNER_ID=your_user_id_here
 ```
 
 3. Set up your Discord server:
-   - Create a category for tickets
-   - Create a channel for transcripts
+   - Create a **category** for tickets
+   - Create a **channel** for transcripts
    - Add the category and transcript channel IDs to your `.env` file
 
 4. Run the bot:
@@ -78,7 +82,7 @@ BOT_OWNER_ID=your_user_id_here
 node bot.js
 ```
 
-5. In your Discord server, run `!setuptickets` to create the ticket panel
+5. In your Discord server, run `/setuptickets` to create the ticket panel
 
 ## 🗂️ Project Structure
 
@@ -97,8 +101,8 @@ MiauDex-Tickets/
 └── handlers/
     ├── button-handler.js             # Button interaction registry
     ├── ticket-handler.js             # Ticket creation/closing logic
-    ├── message-handler.js            # Command handling
-    └── interaction-handler.js        # Discord interaction handling
+    ├── interaction-handler.js        # Interaction handling
+    └── slash-commands.js             # Slash command
 ```
 
 ## ⚙️ Configuration Options
@@ -110,7 +114,6 @@ MiauDex-Tickets/
 | `DISCORD_TOKEN` | ✅ | Your Discord bot token |
 | `TICKET_CATEGORY_ID` | ✅ | Category ID where ticket channels will be created |
 | `TRANSCRIPT_CHANNEL_ID` | ✅ | Channel ID where transcripts will be saved |
-| `BOT_OWNER_ID` | ❌ | Additional security for setup command |
 
 ### Bot Permissions
 
