@@ -1,10 +1,24 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
-const { getNextTicketNumber, addTicket, removeTicket, getTicketByChannel, getTicketByUser } = require('../database/database');
+const { getNextTicketNumber, addTicket, removeTicket, getTicketByChannel, getTicketByUser, isBlacklisted, getAdminRole } = require('../database/database');
 const { saveTranscript } = require('../services/transcript-service');
 
 async function handleTicketButton(interaction, client) {
   const guild = interaction.guild;
   const user = interaction.user;
+
+  if (!guild || !interaction.member) {
+    return interaction.reply({
+      content: '❌ This command can only be used in a server.',
+      ephemeral: true
+    });
+  }
+
+  if (isBlacklisted(guild.id, user.id)) {
+    return interaction.reply({
+      content: '❌ You are blacklisted from creating tickets.',
+      ephemeral: true
+    });
+  }
 
   const existingTicket = getTicketByUser(guild.id, user.id);
   if (existingTicket) {
@@ -18,26 +32,61 @@ async function handleTicketButton(interaction, client) {
   const channelName = `ticket-${String(ticketNumber).padStart(4, '0')}`;
   const ticketCategoryId = process.env.TICKET_CATEGORY_ID;
 
+  const adminRoleId = getAdminRole(guild.id);
+
   try {
-    const channel = await guild.channels.create({
-      name: channelName,
-      type: 0,
-      parent: ticketCategoryId,
-      permissionOverwrites: [
-        {
-          id: guild.roles.everyone.id,
-          deny: [PermissionFlagsBits.ViewChannel]
-        },
-        {
-          id: user.id,
+    const permissionOverwrites = [
+      {
+        id: guild.roles.everyone.id,
+        deny: [PermissionFlagsBits.ViewChannel]
+      },
+      {
+        id: user.id,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.AttachFiles
+        ]
+      }
+    ];
+
+    if (adminRoleId) {
+      const adminRole = guild.roles.cache.get(adminRoleId);
+      if (adminRole) {
+        permissionOverwrites.push({
+          id: adminRoleId,
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
             PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.AttachFiles
+            PermissionFlagsBits.ManageMessages
           ]
-        }
-      ],
+        });
+      }
+    }
+
+    const membersWithManageChannels = guild.members.cache.filter(member => 
+      member.permissions.has(PermissionFlagsBits.ManageChannels)
+    );
+
+    membersWithManageChannels.forEach(member => {
+      permissionOverwrites.push({
+        id: member.user.id,
+        allow: [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.ManageMessages
+        ]
+      });
+    });
+
+    const channel = await guild.channels.create({
+      name: channelName,
+      type: 0,
+      parent: ticketCategoryId,
+      permissionOverwrites: permissionOverwrites,
     });
 
     addTicket(guild.id, channel.id, user.id);
@@ -94,14 +143,23 @@ async function handleCloseTicket(interaction, client) {
     });
   }
 
+  if (!interaction.guild || !interaction.member) {
+    return interaction.reply({
+      content: '❌ This command can only be used in a server.',
+      ephemeral: true
+    });
+  }
+
   const user = interaction.user;
   const member = interaction.member;
-  const isTicketOwner = ticket.user_id === user.id;
   const hasManageChannels = member.permissions.has(PermissionFlagsBits.ManageChannels);
+  
+  const adminRoleId = getAdminRole(interaction.guild.id);
+  const hasAdminRole = adminRoleId && member.roles.cache.has(adminRoleId);
 
-  if (!isTicketOwner && !hasManageChannels) {
+  if (!hasManageChannels && !hasAdminRole) {
     return interaction.reply({
-      content: '❌ You can only close your own tickets or you need Manage Channels permission.',
+      content: '❌ Only administrators can close tickets.',
       ephemeral: true
     });
   }
