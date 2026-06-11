@@ -18,6 +18,32 @@ setupDatabase();
 client.buttonHandlers = new Collection();
 registerButtonHandlers(client);
 
+client.on('shardError', error => {
+  console.error('Shard error:', error);
+});
+
+client.on('error', error => {
+  console.error('Client error:', error);
+});
+
+if (client.ws && client.ws.on) {
+  client.ws.on('error', error => {
+    console.error('WebSocket manager error:', error);
+  });
+}
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', err => {
+  console.error('Uncaught Exception thrown:', err);
+});
+
+process.on('uncaughtExceptionMonitor', (err, origin) => {
+  console.error('Uncaught Exception monitor:', err, origin);
+});
+
 async function deployCommands() {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   
